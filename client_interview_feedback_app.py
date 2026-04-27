@@ -113,39 +113,25 @@ def password_gate() -> bool:
     return False
 
 
-def sync_product_subtype_selection() -> None:
-    current_type = st.session_state.get("product_type", list(PRODUCT_OPTIONS.keys())[0])
-    valid_subtypes = PRODUCT_OPTIONS[current_type]
-    current_subtype = st.session_state.get("product_sub_type")
-
-    if current_subtype not in valid_subtypes:
-        st.session_state.product_sub_type = valid_subtypes[0]
-
-
 if not password_gate():
     st.stop()
-
-if "product_type" not in st.session_state:
-    st.session_state.product_type = list(PRODUCT_OPTIONS.keys())[0]
-
-sync_product_subtype_selection()
 
 st.title("Client Interview Feedback")
 st.caption("Capture interview feedback and download all submissions as a CSV file.")
 
-with st.form("feedback_form", clear_on_submit=True):
-    product_type = st.selectbox(
-        "Product Type",
-        options=list(PRODUCT_OPTIONS.keys()),
-        key="product_type",
-        on_change=sync_product_subtype_selection,
-    )
-    product_sub_type = st.selectbox(
-        "Product Sub Type",
-        options=PRODUCT_OPTIONS[st.session_state.product_type],
-        key="product_sub_type",
-    )
+selected_product_type = st.selectbox(
+    "Product Type",
+    options=list(PRODUCT_OPTIONS.keys()),
+    key="product_type_selector",
+)
 
+selected_product_sub_type = st.selectbox(
+    "Product Sub Type",
+    options=PRODUCT_OPTIONS[selected_product_type],
+    key=f"product_sub_type_selector_{selected_product_type}",
+)
+
+with st.form("feedback_form", clear_on_submit=True):
     banker_initials = st.text_input("Banker Initials", max_chars=10, help="Use letters only, for example AB.")
     interview_date = st.text_input("Date of user interview (DD/MM/YYYY)", placeholder="DD/MM/YYYY")
     additional_info = st.text_area("Optional Additional Information", height=120)
@@ -155,7 +141,6 @@ with st.form("feedback_form", clear_on_submit=True):
         "Timeframe for moving across",
         options=["< 1 month", "1-3 months", "3-6 months", "Over 6 months"],
     )
-
     submitted = st.form_submit_button("Submit Feedback")
 
 if submitted:
@@ -178,8 +163,8 @@ if submitted:
             "Submitted At": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
             "Banker Initials": banker_initials.strip().upper(),
             "User Interview Date": interview_date.strip(),
-            "Product Type": product_type,
-            "Product Sub Type": product_sub_type,
+            "Product Type": selected_product_type,
+            "Product Sub Type": selected_product_sub_type,
             "Optional Additional Information": additional_info.strip(),
             "Unlockable AUM in £m": unlockable_aum.strip(),
             "Is It A Dealbreaker For The Client": dealbreaker,
@@ -187,8 +172,6 @@ if submitted:
         }
         save_row(row)
         st.success("Feedback submitted successfully.")
-        st.session_state.product_type = list(PRODUCT_OPTIONS.keys())[0]
-        st.session_state.product_sub_type = PRODUCT_OPTIONS[st.session_state.product_type][0]
 
 
 df = load_data()
